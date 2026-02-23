@@ -8,30 +8,51 @@ import dynamic from 'next/dynamic';
 const SearchMap = dynamic(() => import('@/components/SearchMap'), { ssr: false });
 
 interface SearchResult {
-  listing_id: number;
-  listing_type: string;
-  rank_score: number;
-  plant: any;
-  cultivar: any;
-  rootstock: any;
-  supplier: any;
-  listing: any;
-  availability: any;
-  confidence: any;
-  match_reasons: { tag: string; label: string }[];
+  listingId: number;
+  supplierId: number;
+  supplierName: string;
+  supplierSlug: string;
+  supplierCity: string;
+  supplierState: string;
+  supplierLat?: number;
+  supplierLng?: number;
+  shipsNationwide: boolean;
+  isOrganic: boolean;
+  plantName: string;
+  botanicalName: string;
+  cultivarName?: string;
+  rootstockName?: string;
+  listingType: string;
+  normalizedTitle: string;
+  priceMin?: number;
+  priceMax?: number;
+  zoneMin?: number;
+  zoneMax?: number;
+  edible: boolean;
+  useTags: string[];
+  pollinationNotes?: string;
+  confidenceScore: number;
+  availabilityStatus: string;
+  textMatchScore: number;
+  distanceMiles?: number;
+  compositeScore: number;
 }
 
 interface MapPin {
-  supplier_id: number;
+  id: number;
   name: string;
-  slug: string;
   lat: number;
   lng: number;
   city: string;
   state: string;
-  listing_count: number;
-  best_status: string;
-  pin_color: string;
+  title: string;
+}
+
+interface SearchMeta {
+  zone?: number;
+  state?: string;
+  totalResults: number;
+  totalSuppliers: number;
 }
 
 export default function SearchPage() {
@@ -41,7 +62,7 @@ export default function SearchPage() {
   const [zip, setZip] = useState(searchParams.get('zip') || '');
   const [results, setResults] = useState<SearchResult[]>([]);
   const [pins, setPins] = useState<MapPin[]>([]);
-  const [meta, setMeta] = useState<any>(null);
+  const [meta, setMeta] = useState<SearchMeta | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
@@ -53,9 +74,16 @@ export default function SearchPage() {
       if (z) params.set('zip', z);
       const res = await fetch(`/api/search?${params}`);
       const data = await res.json();
-      setResults(data.results || []);
-      setPins(data.map_pins || []);
-      setMeta(data.meta || null);
+      const nextResults = data.results || [];
+      const supplierCount = new Set(nextResults.map((r: SearchResult) => r.supplierId)).size;
+      setResults(nextResults);
+      setPins(data.pins || []);
+      setMeta({
+        zone: data.zone,
+        state: data.state,
+        totalResults: nextResults.length,
+        totalSuppliers: supplierCount,
+      });
     } catch (e) {
       console.error('Search failed:', e);
     } finally {
@@ -80,10 +108,10 @@ export default function SearchPage() {
 
   const filteredResults = activeFilter
     ? results.filter(r => {
-        if (activeFilter === 'in_stock') return r.availability.status === 'in_stock' || r.availability.status === 'limited';
-        if (activeFilter === 'scionwood') return r.listing_type === 'scionwood';
-        if (activeFilter === 'rootstock') return r.listing_type === 'rootstock';
-        if (activeFilter === 'ships_now') return r.availability.ships_now;
+        if (activeFilter === 'in_stock') return r.availabilityStatus === 'in_stock' || r.availabilityStatus === 'limited';
+        if (activeFilter === 'scionwood') return r.listingType === 'scion';
+        if (activeFilter === 'rootstock') return r.listingType === 'rootstock';
+        if (activeFilter === 'ships_now') return r.shipsNationwide;
         return true;
       })
     : results;
@@ -125,15 +153,15 @@ export default function SearchPage() {
 
         {/* Location chip + filters */}
         <div className="max-w-screen-2xl mx-auto mt-2 flex items-center gap-2 flex-wrap">
-          {meta?.user_location && (
+          {meta?.zone && (
             <span className="inline-flex items-center gap-1 bg-stone-800 text-stone-400 text-xs px-2.5 py-1 rounded-full">
               <span className="text-emerald-500">&#9679;</span>
-              Zone {meta.user_location.zone} &middot; {meta.user_location.city}, {meta.user_location.state}
+              Zone {meta.zone} {meta.state ? `· ${meta.state}` : ''}
             </span>
           )}
 
           <span className="text-stone-600 text-xs">
-            {meta ? `${meta.total_results} results from ${meta.total_suppliers} nurseries` : ''}
+            {meta ? `${meta.totalResults} results from ${meta.totalSuppliers} nurseries` : ''}
           </span>
 
           <div className="ml-auto flex gap-1.5">
@@ -165,7 +193,7 @@ export default function SearchPage() {
         {/* Map */}
         <div className="lg:w-[55%] h-[300px] lg:h-auto bg-stone-900 relative">
           {pins.length > 0 ? (
-            <SearchMap pins={pins} userLat={meta?.user_location?.lat} userLng={meta?.user_location?.lng} />
+            <SearchMap pins={pins} />
           ) : (
             <div className="absolute inset-0 flex items-center justify-center text-stone-600 text-sm">
               {loading ? 'Searching...' : 'No results to map'}
@@ -185,7 +213,7 @@ export default function SearchPage() {
           ) : (
             <div className="divide-y divide-stone-800/50">
               {filteredResults.map((r) => (
-                <ResultCard key={r.listing_id} result={r} />
+                <ResultCard key={r.listingId} result={r} />
               ))}
             </div>
           )}
@@ -220,14 +248,22 @@ function ResultCard({ result: r }: { result: SearchResult }) {
     low: 'bg-stone-500',
   };
 
+  const confidenceBand =
+    r.confidenceScore >= 80 ? 'high' : r.confidenceScore >= 60 ? 'medium' : 'low';
+
+  const priceLabel = r.priceMin
+    ? r.priceMax && r.priceMax !== r.priceMin
+      ? `$${r.priceMin.toFixed(2)}–$${r.priceMax.toFixed(2)}`
+      : `$${r.priceMin.toFixed(2)}`
+    : null;
+
   const typeLabels: Record<string, string> = {
     plant: 'Plant',
-    cultivar_plant: 'Plant',
     rootstock: 'Rootstock',
-    scionwood: 'Scionwood',
+    scion: 'Scionwood',
     cutting: 'Cutting',
     seed: 'Seed',
-    liner: 'Liner',
+    tree: 'Tree',
   };
 
   return (
@@ -236,44 +272,40 @@ function ResultCard({ result: r }: { result: SearchResult }) {
         <div className="flex-1 min-w-0">
           {/* Title */}
           <h3 className="text-stone-100 font-medium text-sm truncate">
-            {r.listing.normalized_title}
+            {r.normalizedTitle}
           </h3>
 
           {/* Supplier + location */}
           <p className="text-stone-500 text-xs mt-0.5">
-            {r.supplier.name} &middot; {r.supplier.city}, {r.supplier.state}
+            {r.supplierName} &middot; {r.supplierCity}, {r.supplierState}
           </p>
 
           {/* Details row */}
           <div className="flex items-center gap-2 mt-2 flex-wrap">
             {/* Status badge */}
-            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border ${statusColors[r.availability.status] || statusColors.unknown}`}>
-              {statusLabels[r.availability.status] || r.availability.status}
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs border ${statusColors[r.availabilityStatus] || statusColors.unknown}`}>
+              {statusLabels[r.availabilityStatus] || r.availabilityStatus}
             </span>
 
             {/* Type badge */}
             <span className="text-stone-600 text-xs bg-stone-800 px-2 py-0.5 rounded-full">
-              {typeLabels[r.listing_type] || r.listing_type}
+              {typeLabels[r.listingType] || r.listingType}
             </span>
 
-            {/* Size */}
-            {r.listing.size_raw && (
-              <span className="text-stone-500 text-xs">{r.listing.size_raw}</span>
+            {/* Notes */}
+            {r.cultivarName && (
+              <span className="text-stone-500 text-xs">{r.cultivarName}</span>
             )}
-
-            {/* Season */}
-            {r.availability.seasonal_window && (
-              <span className="text-stone-500 text-xs">
-                Ships {r.availability.seasonal_window.start}
-              </span>
+            {r.rootstockName && (
+              <span className="text-stone-500 text-xs">on {r.rootstockName}</span>
             )}
           </div>
 
           {/* Match reasons */}
           <div className="flex items-center gap-1.5 mt-2 flex-wrap">
-            {r.match_reasons.slice(0, 4).map((reason, i) => (
+            {r.useTags.slice(0, 4).map((tag, i) => (
               <span key={i} className="text-stone-600 text-[10px] bg-stone-900 px-1.5 py-0.5 rounded">
-                {reason.label}
+                {tag}
               </span>
             ))}
           </div>
@@ -281,15 +313,15 @@ function ResultCard({ result: r }: { result: SearchResult }) {
 
         {/* Right side: price + confidence */}
         <div className="text-right shrink-0">
-          {r.listing.price_amount && (
+          {priceLabel && (
             <p className="text-stone-200 font-medium text-sm">
-              ${r.listing.price_amount.toFixed(2)}
+              {priceLabel}
             </p>
           )}
           <div className="flex items-center gap-1 mt-1 justify-end">
-            <span className={`w-1.5 h-1.5 rounded-full ${confidenceColors[r.confidence.band] || confidenceColors.low}`} />
+            <span className={`w-1.5 h-1.5 rounded-full ${confidenceColors[confidenceBand] || confidenceColors.low}`} />
             <span className="text-stone-600 text-[10px]">
-              {r.confidence.band}
+              {confidenceBand} ({Math.round(r.confidenceScore)})
             </span>
           </div>
         </div>

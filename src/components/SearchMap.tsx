@@ -5,16 +5,13 @@ import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaf
 import 'leaflet/dist/leaflet.css';
 
 interface MapPin {
-  supplier_id: number;
+  id: number;
   name: string;
-  slug: string;
   lat: number;
   lng: number;
   city: string;
   state: string;
-  listing_count: number;
-  best_status: string;
-  pin_color: string;
+  title: string;
 }
 
 interface SearchMapProps {
@@ -23,12 +20,7 @@ interface SearchMapProps {
   userLng?: number;
 }
 
-const PIN_COLORS: Record<string, string> = {
-  green: '#10b981',
-  yellow: '#f59e0b',
-  blue: '#3b82f6',
-  gray: '#6b7280',
-};
+const PIN_COLOR = '#10b981';
 
 function FitBounds({ pins, userLat, userLng }: { pins: MapPin[]; userLat?: number; userLng?: number }) {
   const map = useMap();
@@ -97,12 +89,12 @@ export default function SearchMap({ pins, userLat, userLng }: SearchMapProps) {
       {/* Supplier pins */}
       {pins.map((pin) => (
         <CircleMarker
-          key={pin.supplier_id}
+          key={pin.id}
           center={[pin.lat, pin.lng]}
-          radius={Math.min(12, 6 + pin.listing_count * 1.5)}
+          radius={7}
           pathOptions={{
-            color: PIN_COLORS[pin.pin_color] || PIN_COLORS.gray,
-            fillColor: PIN_COLORS[pin.pin_color] || PIN_COLORS.gray,
+            color: PIN_COLOR,
+            fillColor: PIN_COLOR,
             fillOpacity: 0.6,
             weight: 2,
           }}
@@ -111,13 +103,7 @@ export default function SearchMap({ pins, userLat, userLng }: SearchMapProps) {
             <div className="text-xs min-w-[140px]">
               <p className="font-semibold text-sm">{pin.name}</p>
               <p className="text-gray-500">{pin.city}, {pin.state}</p>
-              <p className="mt-1">{pin.listing_count} matching {pin.listing_count === 1 ? 'listing' : 'listings'}</p>
-              <a
-                href={`/supplier/${pin.slug}`}
-                className="text-emerald-600 hover:underline mt-1 block"
-              >
-                View nursery &rarr;
-              </a>
+              <p className="mt-1">{pin.title}</p>
             </div>
           </Popup>
         </CircleMarker>

@@ -1,205 +1,169 @@
-import { getDb, initializeDb } from './db';
+import { createClient } from '@supabase/supabase-js';
 
-export function seedDatabase() {
-  const db = initializeDb();
+const supabaseUrl = 'https://bwfhdyjjuubpzwjngquo.supabase.co';
+const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3ZmhkeWpqdXVicHp3am5ncXVvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTg0ODg2OCwiZXhwIjoyMDg3NDI0ODY4fQ.FlHujojrkLzsmBE9Gm2VHRr9QxZxm0nrfd_A_cLI9WE';
 
-  // Check if already seeded
-  const count = db.prepare('SELECT COUNT(*) as c FROM plants').get() as any;
-  if (count.c > 0) return;
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-  // Seed plants
-  const insertPlant = db.prepare(`
-    INSERT INTO plants (botanical_name, common_name, common_aliases, plant_group, edible, zone_min, zone_max, sun, soil_moisture, use_tags, pollination_notes, chill_hours_min, description)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
+async function seed() {
+  console.log('Seeding plants...');
+  const { count: plantCount } = await supabase.from('plants').select('*', { count: 'exact', head: true });
+  if (!plantCount || plantCount === 0) {
+    const { error: plantError } = await supabase.from('plants').insert([
+      { botanical_name: 'Asimina triloba', common_name: 'Pawpaw', common_aliases: ['Indiana banana','poor mans banana'], plant_group: 'tree', edible: true, zone_min: 5, zone_max: 9, sun: ['full sun','partial shade'], soil_moisture: ['moist','well-drained'], use_tags: ['fresh eating','wildlife'], pollination_notes: 'Requires cross-pollination. Plant 2+ trees.', chill_hours_min: 400, growth_rate: 'moderate', mature_height_ft: 20, description: 'Native North American fruit tree with large tropical-flavored fruits.' },
+      { botanical_name: 'Diospyros virginiana', common_name: 'American Persimmon', common_aliases: ['possumwood','simmon'], plant_group: 'tree', edible: true, zone_min: 4, zone_max: 9, sun: ['full sun','partial shade'], soil_moisture: ['dry','moist','well-drained'], use_tags: ['fresh eating','wildlife','drying'], pollination_notes: 'Dioecious — need male and female trees for fruit.', chill_hours_min: 100, growth_rate: 'slow', mature_height_ft: 60, description: 'Hardy native persimmon with astringent fruits that sweeten after frost.' },
+      { botanical_name: 'Diospyros kaki', common_name: 'Asian Persimmon', common_aliases: ['Japanese persimmon','kaki'], plant_group: 'tree', edible: true, zone_min: 7, zone_max: 10, sun: ['full sun'], soil_moisture: ['well-drained'], use_tags: ['fresh eating','drying'], pollination_notes: 'Most cultivars self-fertile.', chill_hours_min: 200, growth_rate: 'moderate', mature_height_ft: 25, description: 'Large-fruited persimmon, non-astringent varieties eaten firm.' },
+      { botanical_name: 'Prunus persica', common_name: 'Peach', common_aliases: ['nectarine'], plant_group: 'tree', edible: true, zone_min: 5, zone_max: 9, sun: ['full sun'], soil_moisture: ['well-drained'], use_tags: ['fresh eating','jam','cooking'], pollination_notes: 'Most varieties self-fertile.', chill_hours_min: 650, growth_rate: 'fast', mature_height_ft: 15, description: 'Classic stone fruit, many varieties available.' },
+      { botanical_name: 'Malus domestica', common_name: 'Apple', common_aliases: ['cider apple','dessert apple'], plant_group: 'tree', edible: true, zone_min: 3, zone_max: 8, sun: ['full sun'], soil_moisture: ['well-drained','moist'], use_tags: ['fresh eating','cider','cooking','jam'], pollination_notes: 'Requires cross-pollination with compatible variety.', chill_hours_min: 800, growth_rate: 'moderate', mature_height_ft: 20, description: 'Most widely grown fruit tree. Thousands of varieties.' },
+      { botanical_name: 'Pyrus communis', common_name: 'Pear', common_aliases: ['European pear'], plant_group: 'tree', edible: true, zone_min: 4, zone_max: 8, sun: ['full sun'], soil_moisture: ['well-drained'], use_tags: ['fresh eating','cooking','canning'], pollination_notes: 'Most varieties need cross-pollination.', chill_hours_min: 600, growth_rate: 'moderate', mature_height_ft: 20, description: 'Long-lived tree with sweet, gritty fruits.' },
+      { botanical_name: 'Prunus avium', common_name: 'Sweet Cherry', common_aliases: ['bird cherry'], plant_group: 'tree', edible: true, zone_min: 5, zone_max: 7, sun: ['full sun'], soil_moisture: ['well-drained'], use_tags: ['fresh eating','jam'], pollination_notes: 'Requires cross-pollination for most varieties.', chill_hours_min: 700, growth_rate: 'fast', mature_height_ft: 35, description: 'Beloved spring fruit tree.' },
+      { botanical_name: 'Juglans regia', common_name: 'English Walnut', common_aliases: ['Persian walnut'], plant_group: 'tree', edible: true, zone_min: 5, zone_max: 9, sun: ['full sun'], soil_moisture: ['deep','well-drained'], use_tags: ['fresh eating','cooking'], pollination_notes: 'Monoecious, but plant 2 for best yields.', growth_rate: 'fast', mature_height_ft: 60, description: 'Large nut tree, highly productive.' },
+      { botanical_name: 'Ficus carica', common_name: 'Fig', common_aliases: ['common fig'], plant_group: 'tree', edible: true, zone_min: 7, zone_max: 11, sun: ['full sun'], soil_moisture: ['well-drained','dry'], use_tags: ['fresh eating','drying','jam'], pollination_notes: 'Most common figs are self-fertile.', growth_rate: 'fast', mature_height_ft: 15, description: 'Sweet fruit, very productive in warm climates.' },
+      { botanical_name: 'Vaccinium corymbosum', common_name: 'Highbush Blueberry', common_aliases: ['blueberry'], plant_group: 'shrub', edible: true, zone_min: 4, zone_max: 7, sun: ['full sun','partial shade'], soil_moisture: ['acidic','moist'], use_tags: ['fresh eating','jam','cooking'], pollination_notes: 'Plant 2+ varieties for better yields.', growth_rate: 'slow', mature_height_ft: 6, description: 'High-yielding berry shrub, needs acid soil.' },
+    ]);
+    if (plantError) throw plantError;
+  }
 
-  const plants = [
-    ['Asimina triloba', 'Pawpaw', '["American Pawpaw","Indiana Banana"]', 'tree', 1, 5, 9, '["full_sun","part_shade"]', '["moist"]', '["edible","native","food_forest"]', 'Requires cross-pollination from genetically different tree', 400, 'Largest edible fruit native to North America. Tropical-tasting fruit.'],
-    ['Sambucus canadensis', 'American Elderberry', '["Elderberry","Common Elderberry"]', 'shrub', 1, 3, 9, '["full_sun","part_shade"]', '["moist","wet_tolerant"]', '["edible","pollinator","native","hedge"]', 'Plant 2+ cultivars for best yields', 500, 'Fast-growing native shrub. Berries for syrup, wine, medicine.'],
-    ['Castanea dentata x mollissima', 'Blight-Resistant Chestnut', '["American-Chinese Chestnut Hybrid"]', 'tree', 1, 4, 8, '["full_sun"]', '["average","moist"]', '["edible","native","timber","food_forest"]', 'Requires cross-pollination. Plant 2+ trees.', 400, 'Hybrid chestnuts bred for blight resistance.'],
-    ['Diospyros virginiana', 'American Persimmon', '["Common Persimmon","Eastern Persimmon"]', 'tree', 1, 4, 9, '["full_sun","part_shade"]', '["average","moist","dry"]', '["edible","native","food_forest","wildlife"]', 'Most cultivars need male pollinator tree', 200, 'Extremely hardy native fruit tree.'],
-    ['Malus domestica', 'Apple', '["Common Apple"]', 'tree', 1, 3, 8, '["full_sun"]', '["average","moist"]', '["edible","food_forest"]', 'Requires cross-pollination from different cultivar', 800, 'The most widely grown temperate fruit tree.'],
-    ['Pyrus communis', 'European Pear', '["Common Pear"]', 'tree', 1, 4, 8, '["full_sun"]', '["average","moist"]', '["edible","food_forest"]', 'Most cultivars need cross-pollination', 600, 'Classic pear species.'],
-    ['Ribes nigrum', 'Black Currant', '["Blackcurrant","Cassis"]', 'shrub', 1, 3, 7, '["full_sun","part_shade"]', '["moist"]', '["edible","food_forest","hedge"]', 'Most modern cultivars are self-fertile', 800, 'Extremely nutritious berries. Cold-hardy.'],
-    ['Morus alba', 'White Mulberry', '["Mulberry"]', 'tree', 1, 4, 9, '["full_sun"]', '["average","moist","dry"]', '["edible","food_forest","wildlife","fast_growing"]', 'Many cultivars are self-fertile', 400, 'Extremely productive fruit tree.'],
-    ['Hippophae rhamnoides', 'Sea Buckthorn', '["Seaberry"]', 'shrub', 1, 3, 7, '["full_sun"]', '["dry","average"]', '["edible","nitrogen_fixer","hedge","erosion_control"]', 'Dioecious - need male and female plants', null, 'Nitrogen-fixing shrub with nutritious berries.'],
-    ['Elaeagnus umbellata', 'Autumn Olive', '["Autumnberry"]', 'shrub', 1, 3, 8, '["full_sun","part_shade"]', '["dry","average"]', '["edible","nitrogen_fixer","wildlife","food_forest"]', 'Self-fertile but better with cross-pollination', null, 'Nitrogen-fixing shrub. Note: invasive in some regions.'],
+  const { data: plants } = await supabase.from('plants').select('id, common_name');
+  if (!plants || plants.length === 0) throw new Error('Plants not found');
+  const pId = (name: string) => plants.find(p => p.common_name === name)?.id;
+
+  console.log('Seeding cultivars...');
+  const { count: cultivarCount } = await supabase.from('cultivars').select('*', { count: 'exact', head: true });
+  if (!cultivarCount || cultivarCount === 0) {
+    const { error: cultivarError } = await supabase.from('cultivars').insert([
+      { plant_id: pId('Pawpaw'), cultivar_name: 'Shenandoah', self_fertile: false, zone_min_override: 5, zone_max_override: 9, description: 'Large fruits, excellent flavor, reliable producer.' },
+      { plant_id: pId('Pawpaw'), cultivar_name: 'Susquehanna', self_fertile: false, zone_min_override: 5, zone_max_override: 9, description: 'Very large fruits, rich flavor.' },
+      { plant_id: pId('American Persimmon'), cultivar_name: 'Meader', self_fertile: true, zone_min_override: 4, zone_max_override: 9, description: 'Self-fertile American persimmon, good producer.' },
+      { plant_id: pId('Asian Persimmon'), cultivar_name: 'Fuyu', self_fertile: true, zone_min_override: 7, zone_max_override: 10, description: 'Non-astringent, eaten firm like an apple.' },
+      { plant_id: pId('Peach'), cultivar_name: 'Reliance', self_fertile: true, zone_min_override: 4, zone_max_override: 8, description: 'Extra-hardy peach, survives zone 4 winters.' },
+      { plant_id: pId('Apple'), cultivar_name: 'Honeycrisp', self_fertile: false, zone_min_override: 3, zone_max_override: 8, description: 'Crisp, sweet-tart, very popular.' },
+      { plant_id: pId('Apple'), cultivar_name: 'Goldrush', self_fertile: false, zone_min_override: 4, zone_max_override: 8, description: 'Late ripening, excellent for cider, disease resistant.' },
+      { plant_id: pId('Sweet Cherry'), cultivar_name: 'Stella', self_fertile: true, zone_min_override: 5, zone_max_override: 7, description: 'One of the few self-fertile sweet cherries.' },
+      { plant_id: pId('Fig'), cultivar_name: 'Brown Turkey', self_fertile: true, zone_min_override: 7, zone_max_override: 11, description: 'Reliable, prolific, mild-flavored fig.' },
+    ]);
+    if (cultivarError) throw cultivarError;
+  }
+
+  const { data: cultivars } = await supabase.from('cultivars').select('id, cultivar_name');
+  const cId = (name: string) => cultivars?.find(c => c.cultivar_name === name)?.id;
+
+  console.log('Seeding rootstocks...');
+  const { count: rootstockCount } = await supabase.from('rootstocks').select('*', { count: 'exact', head: true });
+  if (!rootstockCount || rootstockCount === 0) {
+    const { error: rootstockError } = await supabase.from('rootstocks').insert([
+      { name: 'M9', vigor_class: 'dwarfing', compatible_with: ['Apple'], description: 'Very dwarfing, needs support, early bearing.' },
+      { name: 'M111', vigor_class: 'semi-vigorous', compatible_with: ['Apple'], description: 'Drought tolerant, good for poor soils.' },
+      { name: 'G11', vigor_class: 'dwarfing', compatible_with: ['Apple'], description: 'Geneva series, replant disease resistant.' },
+      { name: 'Lovell', vigor_class: 'standard', compatible_with: ['Peach','Nectarine','Plum'], description: 'Standard peach rootstock, excellent anchorage.' },
+      { name: 'Citation', vigor_class: 'semi-dwarfing', compatible_with: ['Peach','Plum','Nectarine'], description: 'Semi-dwarfing, good for wet soils.' },
+      { name: 'Gisela 6', vigor_class: 'semi-dwarfing', compatible_with: ['Sweet Cherry'], description: 'Widely used cherry dwarfing rootstock.' },
+      { name: 'OHxF 97', vigor_class: 'semi-vigorous', compatible_with: ['Pear'], description: 'Fire blight resistant, good anchorage.' },
+    ]);
+    if (rootstockError) throw rootstockError;
+  }
+
+  const { data: rootstocks } = await supabase.from('rootstocks').select('id, name');
+  const rId = (name: string) => rootstocks?.find(r => r.name === name)?.id;
+
+  console.log('Seeding suppliers...');
+  const { count: supplierCount } = await supabase.from('suppliers').select('*', { count: 'exact', head: true });
+  const supplierSeed = [
+    { name: 'One Green World', slug: 'one-green-world', city: 'Mollala', state: 'OR', lat: 45.14, lng: -122.57, shipsNationwide: true, pickupAvailable: false, website_url: 'https://onegreenworld.com', bio: 'Rare and unusual edible plants.' },
+    { name: 'Cummins Nursery', slug: 'cummins-nursery', city: 'Ithaca', state: 'NY', lat: 42.44, lng: -76.50, shipsNationwide: true, pickupAvailable: false, website_url: 'https://cumminsnursery.com', bio: 'Fruit tree specialists, excellent rootstock selection.' },
+    { name: 'Stark Bros', slug: 'stark-bros', city: 'Louisiana', state: 'MO', lat: 39.44, lng: -91.05, shipsNationwide: true, pickupAvailable: false, website_url: 'https://starkbros.com', bio: 'Over 190 years of fruit tree growing.' },
+    { name: 'Fedco Trees', slug: 'fedco-trees', city: 'Clinton', state: 'ME', lat: 44.63, lng: -69.50, shipsNationwide: false, pickupAvailable: true, website_url: 'https://fedcoseeds.com/trees', bio: 'Cooperative, cold-hardy varieties, Northeast focus.' },
+    { name: 'Raintree Nursery', slug: 'raintree-nursery', city: 'Morton', state: 'WA', lat: 46.55, lng: -122.27, shipsNationwide: true, pickupAvailable: false, website_url: 'https://raintree-nursery.com', bio: 'Pacific Northwest edible plant specialists.' },
+    { name: 'Burnt Ridge Nursery', slug: 'burnt-ridge', city: 'Onalaska', state: 'WA', lat: 46.54, lng: -122.65, shipsNationwide: true, pickupAvailable: false, website_url: 'https://burntridgenursery.com', bio: 'Nuts, fruits, and native plants.' },
+    { name: 'Hidden Springs Nursery', slug: 'hidden-springs', city: 'Cookeville', state: 'TN', lat: 36.16, lng: -85.50, shipsNationwide: false, pickupAvailable: true, website_url: 'https://hiddenspringsnursery.com', bio: 'Pawpaw and persimmon specialists.' },
+    { name: 'Indiana Nut & Fruit', slug: 'indiana-nut-fruit', city: 'Bloomington', state: 'IN', lat: 39.16, lng: -86.52, shipsNationwide: false, pickupAvailable: true, website_url: 'https://indiananutandfruit.com', bio: 'Native Midwestern edibles.' },
+    { name: 'Maple Valley Orchards', slug: 'maple-valley-orchards', city: 'Covington', state: 'WA', lat: 47.36, lng: -122.10, shipsNationwide: false, pickupAvailable: true, website_url: 'https://maplevalleyorchards.com', bio: 'Local Pacific Northwest orchard.' },
+    { name: 'Trees of Antiquity', slug: 'trees-of-antiquity', city: 'Paso Robles', state: 'CA', lat: 35.63, lng: -120.69, shipsNationwide: true, pickupAvailable: false, website_url: 'https://treesofantiquity.com', bio: 'Heirloom apple and fruit tree specialists.' },
   ];
 
-  const insertMany = db.transaction(() => {
-    for (const p of plants) {
-      insertPlant.run(...p);
-    }
-  });
-  insertMany();
+  if (!supplierCount || supplierCount === 0) {
+    const { error: supplierError } = await supabase.from('suppliers').insert(
+      supplierSeed.map(s => ({
+        name: s.name,
+        slug: s.slug,
+        city: s.city,
+        state: s.state,
+        lat: s.lat,
+        lng: s.lng,
+        shipping_states: s.shipsNationwide ? ['ALL'] : [],
+        pickup_available: s.pickupAvailable,
+        retail_enabled: true,
+        wholesale_enabled: false,
+        supplier_status: 'active',
+        website_url: s.website_url,
+        bio: s.bio,
+      }))
+    );
+    if (supplierError) throw supplierError;
+  }
 
-  // Seed cultivars
-  const insertCultivar = db.prepare(`
-    INSERT INTO cultivars (plant_id, cultivar_name, aliases, self_fertile, ripening_window, disease_resistance, description)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
+  const { data: suppliers } = await supabase.from('suppliers').select('id, name, slug');
+  const sId = (slug: string) => suppliers?.find(s => s.slug === slug)?.id;
+  const sName = (slug: string) => suppliers?.find(s => s.slug === slug)?.name || '';
 
-  const pawpawId = (db.prepare("SELECT id FROM plants WHERE common_name = 'Pawpaw'").get() as any).id;
-  const appleId = (db.prepare("SELECT id FROM plants WHERE common_name = 'Apple'").get() as any).id;
-  const elderberryId = (db.prepare("SELECT id FROM plants WHERE common_name = 'American Elderberry'").get() as any).id;
-  const persimmonId = (db.prepare("SELECT id FROM plants WHERE common_name = 'American Persimmon'").get() as any).id;
+  console.log('Seeding listings...');
+  const { count: listingCount } = await supabase.from('supplier_listings').select('*', { count: 'exact', head: true });
+  if (!listingCount || listingCount === 0) {
+    const ships = (slug: string) => supplierSeed.find(s => s.slug === slug)?.shipsNationwide || false;
+    const pickupOnly = (slug: string) => !ships(slug);
 
-  const cultivars = [
-    [pawpawId, 'Susquehanna', '["Susquehanna Pawpaw"]', 0, 'Mid-September', '[]', 'Large fruit, excellent flavor.'],
-    [pawpawId, 'Shenandoah', '["Shenandoah Pawpaw"]', 0, 'Mid-September', '[]', 'Reliable producer. Sweet fruit.'],
-    [pawpawId, 'Peterson Pawpaw', '["Petersons Pawpaw"]', 0, 'September', '[]', 'Large fruit, very cold hardy.'],
-    [appleId, 'Liberty', '["Liberty Apple"]', 0, 'Late September', '["scab_immune","fire_blight_resistant"]', 'Disease-resistant heritage apple.'],
-    [appleId, 'Honeycrisp', '["Honey Crisp"]', 0, 'Late September', '[]', 'Extremely popular sweet-tart apple.'],
-    [appleId, 'Enterprise', '["Enterprise Apple"]', 0, 'October', '["scab_immune","fire_blight_resistant"]', 'Disease resistant, great storage apple.'],
-    [elderberryId, 'York', '["York Elderberry"]', 0, 'August-September', '[]', 'High-yielding. Excellent for syrup.'],
-    [elderberryId, 'Bob Gordon', '["Bob Gordon Elderberry"]', 0, 'August', '[]', 'Very productive cultivar.'],
-    [persimmonId, 'Prok', '["Prok Persimmon"]', 0, 'October', '[]', 'Large fruit, excellent flavor. Female.'],
-  ];
+    const { error: listingError } = await supabase.from('supplier_listings').insert([
+      { supplier_id: sId('hidden-springs'), supplier_raw_name: sName('hidden-springs'), plant_id: pId('Pawpaw'), cultivar_id: cId('Shenandoah'), listing_type: 'tree', normalized_title: 'Pawpaw Shenandoah Tree', price_amount: 28, availability_status: 'in_stock', is_visible: true, confidence_score: 90, ships_now: ships('hidden-springs'), pickup_only: pickupOnly('hidden-springs') },
+      { supplier_id: sId('hidden-springs'), supplier_raw_name: sName('hidden-springs'), plant_id: pId('Pawpaw'), cultivar_id: cId('Susquehanna'), listing_type: 'tree', normalized_title: 'Pawpaw Susquehanna Tree', price_amount: 30, availability_status: 'limited', is_visible: true, confidence_score: 88, ships_now: ships('hidden-springs'), pickup_only: pickupOnly('hidden-springs') },
+      { supplier_id: sId('one-green-world'), supplier_raw_name: sName('one-green-world'), plant_id: pId('Pawpaw'), cultivar_id: cId('Shenandoah'), listing_type: 'tree', normalized_title: 'Pawpaw Shenandoah Ships Nationwide', price_amount: 35, availability_status: 'in_stock', is_visible: true, confidence_score: 92, ships_now: ships('one-green-world'), pickup_only: pickupOnly('one-green-world') },
+      { supplier_id: sId('indiana-nut-fruit'), supplier_raw_name: sName('indiana-nut-fruit'), plant_id: pId('Pawpaw'), listing_type: 'scion', normalized_title: 'Pawpaw Scionwood Mixed Varieties', price_amount: 8, availability_status: 'seasonal', is_visible: true, confidence_score: 75, ships_now: ships('indiana-nut-fruit'), pickup_only: pickupOnly('indiana-nut-fruit') },
+      { supplier_id: sId('hidden-springs'), supplier_raw_name: sName('hidden-springs'), plant_id: pId('American Persimmon'), cultivar_id: cId('Meader'), listing_type: 'tree', normalized_title: 'American Persimmon Meader Tree', price_amount: 22, availability_status: 'in_stock', is_visible: true, confidence_score: 88, ships_now: ships('hidden-springs'), pickup_only: pickupOnly('hidden-springs') },
+      { supplier_id: sId('one-green-world'), supplier_raw_name: sName('one-green-world'), plant_id: pId('Asian Persimmon'), cultivar_id: cId('Fuyu'), listing_type: 'tree', normalized_title: 'Fuyu Persimmon Non-Astringent', price_amount: 30, availability_status: 'in_stock', is_visible: true, confidence_score: 92, ships_now: ships('one-green-world'), pickup_only: pickupOnly('one-green-world') },
+      { supplier_id: sId('cummins-nursery'), supplier_raw_name: sName('cummins-nursery'), plant_id: pId('Apple'), cultivar_id: cId('Honeycrisp'), rootstock_id: rId('M9'), listing_type: 'tree', normalized_title: 'Honeycrisp Apple on M9 Rootstock', price_amount: 35, availability_status: 'in_stock', is_visible: true, confidence_score: 95, ships_now: ships('cummins-nursery'), pickup_only: pickupOnly('cummins-nursery') },
+      { supplier_id: sId('cummins-nursery'), supplier_raw_name: sName('cummins-nursery'), plant_id: pId('Apple'), cultivar_id: cId('Goldrush'), rootstock_id: rId('M111'), listing_type: 'tree', normalized_title: 'Goldrush Apple on M111 Cider Apple', price_amount: 38, availability_status: 'in_stock', is_visible: true, confidence_score: 93, ships_now: ships('cummins-nursery'), pickup_only: pickupOnly('cummins-nursery') },
+      { supplier_id: sId('cummins-nursery'), supplier_raw_name: sName('cummins-nursery'), plant_id: pId('Apple'), rootstock_id: rId('M9'), listing_type: 'rootstock', normalized_title: 'M9 Apple Rootstock Bare Root', price_amount: 5, availability_status: 'in_stock', is_visible: true, confidence_score: 85, ships_now: ships('cummins-nursery'), pickup_only: pickupOnly('cummins-nursery') },
+      { supplier_id: sId('stark-bros'), supplier_raw_name: sName('stark-bros'), plant_id: pId('Peach'), cultivar_id: cId('Reliance'), listing_type: 'tree', normalized_title: 'Reliance Peach Hardy Bare Root Tree', price_amount: 25, availability_status: 'in_stock', is_visible: true, confidence_score: 90, ships_now: ships('stark-bros'), pickup_only: pickupOnly('stark-bros') },
+      { supplier_id: sId('fedco-trees'), supplier_raw_name: sName('fedco-trees'), plant_id: pId('Peach'), cultivar_id: cId('Reliance'), listing_type: 'tree', normalized_title: 'Reliance Peach Cold Hardy', price_amount: 22, availability_status: 'in_stock', is_visible: true, confidence_score: 88, ships_now: ships('fedco-trees'), pickup_only: pickupOnly('fedco-trees') },
+      { supplier_id: sId('raintree-nursery'), supplier_raw_name: sName('raintree-nursery'), plant_id: pId('Sweet Cherry'), cultivar_id: cId('Stella'), rootstock_id: rId('Gisela 6'), listing_type: 'tree', normalized_title: 'Stella Self-Fertile Cherry on Gisela 6', price_amount: 42, availability_status: 'in_stock', is_visible: true, confidence_score: 91, ships_now: ships('raintree-nursery'), pickup_only: pickupOnly('raintree-nursery') },
+      { supplier_id: sId('fedco-trees'), supplier_raw_name: sName('fedco-trees'), plant_id: pId('Pear'), rootstock_id: rId('OHxF 97'), listing_type: 'tree', normalized_title: 'Pear Tree on OHxF 97 Rootstock', price_amount: 28, availability_status: 'in_stock', is_visible: true, confidence_score: 87, ships_now: ships('fedco-trees'), pickup_only: pickupOnly('fedco-trees') },
+      { supplier_id: sId('burnt-ridge'), supplier_raw_name: sName('burnt-ridge'), plant_id: pId('English Walnut'), listing_type: 'tree', normalized_title: 'English Walnut Bare Root Tree', price_amount: 20, availability_status: 'in_stock', is_visible: true, confidence_score: 85, ships_now: ships('burnt-ridge'), pickup_only: pickupOnly('burnt-ridge') },
+      { supplier_id: sId('one-green-world'), supplier_raw_name: sName('one-green-world'), plant_id: pId('Fig'), cultivar_id: cId('Brown Turkey'), listing_type: 'tree', normalized_title: 'Brown Turkey Fig Ships Nationwide', price_amount: 22, availability_status: 'in_stock', is_visible: true, confidence_score: 90, ships_now: ships('one-green-world'), pickup_only: pickupOnly('one-green-world') },
+      { supplier_id: sId('raintree-nursery'), supplier_raw_name: sName('raintree-nursery'), plant_id: pId('Highbush Blueberry'), listing_type: 'plant', normalized_title: 'Highbush Blueberry Mixed Varieties', price_amount: 12, availability_status: 'in_stock', is_visible: true, confidence_score: 88, ships_now: ships('raintree-nursery'), pickup_only: pickupOnly('raintree-nursery') },
+      { supplier_id: sId('trees-of-antiquity'), supplier_raw_name: sName('trees-of-antiquity'), plant_id: pId('Apple'), listing_type: 'scion', normalized_title: 'Heirloom Apple Scionwood Ships Nationwide', price_amount: 6, availability_status: 'seasonal', is_visible: true, confidence_score: 80, ships_now: ships('trees-of-antiquity'), pickup_only: pickupOnly('trees-of-antiquity') },
+      { supplier_id: sId('maple-valley-orchards'), supplier_raw_name: sName('maple-valley-orchards'), plant_id: pId('Apple'), listing_type: 'tree', normalized_title: 'Local Apple Tree Pacific Northwest', price_amount: 28, availability_status: 'in_stock', is_visible: true, confidence_score: 82, ships_now: ships('maple-valley-orchards'), pickup_only: pickupOnly('maple-valley-orchards') },
+    ]);
+    if (listingError) throw listingError;
+  }
 
-  db.transaction(() => {
-    for (const c of cultivars) {
-      insertCultivar.run(...c);
-    }
-  })();
+  console.log('Seeding zip zones...');
+  const { count: zipCount } = await supabase.from('zip_zones').select('*', { count: 'exact', head: true });
+  if (!zipCount || zipCount === 0) {
+    const { error: zipError } = await supabase.from('zip_zones').insert([
+      { zip_code: '97201', state: 'OR', zone: 8, lat: 45.52, lng: -122.68 },
+      { zip_code: '10001', state: 'NY', zone: 7, lat: 40.75, lng: -73.99 },
+      { zip_code: '60601', state: 'IL', zone: 6, lat: 41.88, lng: -87.63 },
+      { zip_code: '30301', state: 'GA', zone: 8, lat: 33.75, lng: -84.39 },
+      { zip_code: '98101', state: 'WA', zone: 8, lat: 47.61, lng: -122.33 },
+      { zip_code: '02101', state: 'MA', zone: 6, lat: 42.36, lng: -71.06 },
+      { zip_code: '37201', state: 'TN', zone: 7, lat: 36.17, lng: -86.78 },
+      { zip_code: '47401', state: 'IN', zone: 6, lat: 39.16, lng: -86.53 },
+      { zip_code: '04401', state: 'ME', zone: 5, lat: 44.80, lng: -68.78 },
+      { zip_code: '93401', state: 'CA', zone: 9, lat: 35.28, lng: -120.66 },
+      { zip_code: '75201', state: 'TX', zone: 8, lat: 32.79, lng: -96.80 },
+      { zip_code: '85001', state: 'AZ', zone: 10, lat: 33.45, lng: -112.07 },
+      { zip_code: '55401', state: 'MN', zone: 4, lat: 44.98, lng: -93.27 },
+      { zip_code: '80201', state: 'CO', zone: 5, lat: 39.74, lng: -104.98 },
+      { zip_code: '43201', state: 'OH', zone: 6, lat: 39.99, lng: -82.99 },
+      { zip_code: '23201', state: 'VA', zone: 7, lat: 37.54, lng: -77.44 },
+      { zip_code: '66101', state: 'KS', zone: 6, lat: 39.12, lng: -94.63 },
+      { zip_code: '28201', state: 'NC', zone: 7, lat: 35.23, lng: -80.84 },
+      { zip_code: '14201', state: 'NY', zone: 6, lat: 42.90, lng: -78.85 },
+      { zip_code: '53201', state: 'WI', zone: 5, lat: 43.04, lng: -87.91 },
+    ]);
+    if (zipError) throw zipError;
+  }
 
-  // Seed rootstocks
-  const insertRootstock = db.prepare(`
-    INSERT INTO rootstocks (name, species, aliases, compatible_with, vigor_class, zone_min, zone_max, soil_tolerance_notes, disease_resistance, anchorage_notes, description)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  const rootstocks = [
-    ['Antonovka Seedling', 'Malus domestica', '["Antonovka"]', '["apple"]', 'standard', 3, 8, 'Very adaptable. Tolerates heavy clay.', '["crown_rot_tolerant"]', 'Excellent anchorage.', 'Classic cold-hardy seedling rootstock.'],
-    ['G.935', 'Malus domestica', '["Geneva 935"]', '["apple"]', 'semi_dwarf', 4, 8, 'Prefers well-drained soil.', '["fire_blight_resistant","crown_rot_resistant"]', 'Good anchorage.', 'Geneva series semi-dwarf. ~80% standard size.'],
-    ['G.210', 'Malus domestica', '["Geneva 210"]', '["apple"]', 'semi_dwarf', 4, 8, 'Well-drained soils preferred.', '["fire_blight_resistant","crown_rot_resistant"]', 'Better than M.26.', 'Newer Geneva rootstock. Very productive.'],
-    ['M.111', 'Malus domestica', '["EMLA 111","Malling 111"]', '["apple"]', 'semi_standard', 4, 8, 'Drought tolerant.', '["woolly_apple_aphid_resistant"]', 'Excellent anchorage.', 'Widely used semi-standard rootstock.'],
-    ['OHxF 87', 'Pyrus communis', '["Old Home x Farmingdale 87"]', '["pear"]', 'semi_standard', 4, 8, 'Adaptable.', '["fire_blight_resistant"]', 'Good anchorage.', 'Standard fire-blight resistant pear rootstock.'],
-    ['OHxF 333', 'Pyrus communis', '["Old Home x Farmingdale 333"]', '["pear"]', 'semi_dwarf', 4, 8, 'Prefers well-drained.', '["fire_blight_resistant"]', 'May need support.', 'Dwarfing pear rootstock.'],
-    ['Dunstan Chestnut Seedling', 'Castanea', '["Dunstan"]', '["chestnut"]', 'standard', 5, 9, 'Well-drained acidic soil.', '["blight_resistant"]', 'Deep taproot.', 'Blight-resistant chestnut rootstock.'],
-  ];
-
-  db.transaction(() => {
-    for (const r of rootstocks) {
-      insertRootstock.run(...r);
-    }
-  })();
-
-  // Seed suppliers
-  const insertSupplier = db.prepare(`
-    INSERT INTO suppliers (name, slug, website_url, city, state, lat, lng, retail_enabled, wholesale_enabled, pickup_available, bio)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  const suppliers = [
-    ['Rolling River Nursery', 'rolling-river-nursery', 'https://rollingrivernursery.com', 'Oregon City', 'OR', 45.3573, -122.6068, 1, 0, 0, 'Specializing in unusual edible plants for the Pacific Northwest.'],
-    ['Burnt Ridge Nursery', 'burnt-ridge-nursery', 'https://burntridgenursery.com', 'Onalaska', 'WA', 46.5354, -122.6682, 1, 1, 1, 'Wide selection of fruit and nut trees, berries, and native plants.'],
-    ['Raintree Nursery', 'raintree-nursery', 'https://raintreenursery.com', 'Morton', 'WA', 46.5567, -122.2751, 1, 0, 0, 'Edible plants for the home gardener. Trees, berries, and more.'],
-    ['Fedco Trees', 'fedco-trees', 'https://fedcoseeds.com/trees', 'Clinton', 'ME', 44.6364, -69.5006, 1, 0, 1, 'Worker-owned cooperative. Cold-hardy fruit trees and rootstock.'],
-    ['Cummins Nursery', 'cummins-nursery', 'https://cumminsnursery.com', 'Ithaca', 'NY', 42.4440, -76.5019, 1, 1, 1, 'Specializing in disease-resistant apple trees and Geneva rootstocks.'],
-    ['Stark Bro\'s Nursery', 'stark-bros', 'https://starkbros.com', 'Louisiana', 'MO', 39.4489, -91.0513, 1, 0, 0, 'America\'s oldest nursery. Fruit trees since 1816.'],
-    ['Nolin River Nut Tree Nursery', 'nolin-river', 'https://nolinriver.com', 'Upton', 'KY', 37.4809, -85.8952, 1, 0, 0, 'Specializing in grafted nut trees — chestnut, walnut, pecan.'],
-    ['St. Lawrence Nurseries', 'st-lawrence-nurseries', 'https://stlawrencenurseries.com', 'Potsdam', 'NY', 44.6697, -74.9816, 1, 0, 1, 'Ultra-cold-hardy fruit and nut trees for northern climates.'],
-    ['Midwest Scionwood Co-op', 'midwest-scionwood', null, 'Madison', 'WI', 43.0731, -89.4012, 1, 0, 0, 'Community scionwood exchange. Wide selection of heritage varieties.'],
-    ['Hidden Springs Nursery', 'hidden-springs', 'https://hiddenspringsnursery.com', 'Cookeville', 'TN', 36.1628, -85.5016, 1, 0, 0, 'Edible and useful plants for permaculture and homesteading.'],
-  ];
-
-  db.transaction(() => {
-    for (const s of suppliers) {
-      insertSupplier.run(...s);
-    }
-  })();
-
-  // Seed supplier listings
-  const insertListing = db.prepare(`
-    INSERT INTO supplier_listings (supplier_id, listing_type, plant_id, cultivar_id, rootstock_id, supplier_raw_name, normalized_title, size_raw, price_amount, availability_status, qty_bucket, seasonal_window_start, seasonal_window_end, ships_now, listing_notes, inventory_source, last_inventory_update, confidence_score, confidence_band)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), ?, ?)
-  `);
-
-  // Get IDs
-  const getSupplier = (slug: string) => (db.prepare("SELECT id FROM suppliers WHERE slug = ?").get(slug) as any)?.id;
-  const getCultivar = (name: string) => (db.prepare("SELECT id FROM cultivars WHERE cultivar_name = ?").get(name) as any)?.id;
-  const getRootstock = (name: string) => (db.prepare("SELECT id FROM rootstocks WHERE name = ?").get(name) as any)?.id;
-
-  const listings = [
-    // Rolling River - Pawpaws
-    [getSupplier('rolling-river-nursery'), 'cultivar_plant', pawpawId, getCultivar('Susquehanna'), null, "Pawpaw 'Susquehanna' grafted", 'Susquehanna Pawpaw - Grafted', '#3 pot, 2-3 ft', 45.00, 'in_stock', '6_25', null, null, 1, 'Grafted on seedling rootstock.', 'csv', 0.85, 'high'],
-    [getSupplier('rolling-river-nursery'), 'cultivar_plant', pawpawId, getCultivar('Shenandoah'), null, "Pawpaw 'Shenandoah' grafted", 'Shenandoah Pawpaw - Grafted', '#3 pot, 2-3 ft', 45.00, 'limited', '1_5', null, null, 1, 'Grafted on seedling rootstock.', 'csv', 0.85, 'high'],
-
-    // Burnt Ridge - Mixed
-    [getSupplier('burnt-ridge-nursery'), 'cultivar_plant', elderberryId, getCultivar('York'), null, "York Elderberry", 'York Elderberry', '#1 pot', 12.00, 'in_stock', '26_100', null, null, 1, 'Rooted cutting.', 'portal', 0.92, 'high'],
-    [getSupplier('burnt-ridge-nursery'), 'cultivar_plant', appleId, getCultivar('Liberty'), null, "Liberty Apple on G.935", 'Liberty Apple on G.935', 'bare root 5/8 cal', 38.00, 'preorder', null, '2026-11-01', '2027-03-15', 0, 'Ships dormant season.', 'portal', 0.90, 'high'],
-
-    // Cummins - Rootstocks
-    [getSupplier('cummins-nursery'), 'rootstock', null, null, getRootstock('G.935'), "G.935 rootstock 9mm", 'G.935 Rootstock', '9mm bare root', 6.00, 'in_stock', '26_100', '2026-11-01', '2027-04-01', 0, 'Tissue culture. Min order 10.', 'portal', 0.95, 'high'],
-    [getSupplier('cummins-nursery'), 'rootstock', null, null, getRootstock('G.210'), "G.210 rootstock 9mm", 'G.210 Rootstock', '9mm bare root', 6.50, 'limited', '6_25', '2026-11-01', '2027-04-01', 0, 'Tissue culture. Min order 10.', 'portal', 0.95, 'high'],
-    [getSupplier('cummins-nursery'), 'rootstock', null, null, getRootstock('Antonovka Seedling'), "Antonovka seedling rootstock", 'Antonovka Seedling Rootstock', '3/8 cal bare root', 4.50, 'in_stock', 'gt_100', '2026-11-01', '2027-04-01', 0, 'Grade A seedling.', 'portal', 0.95, 'high'],
-
-    // Fedco - Scionwood + trees
-    [getSupplier('fedco-trees'), 'scionwood', appleId, getCultivar('Liberty'), null, "Liberty apple scionwood", 'Liberty Apple Scionwood', '10-12 in sticks', 4.00, 'seasonal', '26_100', '2027-01-15', '2027-03-01', 0, '1-year wood. Min 3 sticks.', 'manual', 0.70, 'medium'],
-    [getSupplier('fedco-trees'), 'scionwood', appleId, getCultivar('Honeycrisp'), null, "Honeycrisp apple scionwood", 'Honeycrisp Apple Scionwood', '10-12 in sticks', 5.00, 'seasonal', '6_25', '2027-01-15', '2027-03-01', 0, '1-year wood. Min 3 sticks.', 'manual', 0.70, 'medium'],
-    [getSupplier('fedco-trees'), 'cultivar_plant', persimmonId, getCultivar('Prok'), null, "Prok American Persimmon", 'Prok American Persimmon', 'bare root 3-4 ft', 35.00, 'preorder', null, '2026-11-15', '2027-03-15', 0, 'Female. Needs pollinator.', 'manual', 0.70, 'medium'],
-
-    // Stark Bros
-    [getSupplier('stark-bros'), 'cultivar_plant', appleId, getCultivar('Honeycrisp'), null, "Honeycrisp Apple Tree", 'Honeycrisp Apple', 'bare root 4-5 ft', 42.00, 'in_stock', null, null, null, 1, 'On M.111 rootstock.', 'scrape', 0.55, 'medium'],
-
-    // Midwest Scionwood
-    [getSupplier('midwest-scionwood'), 'scionwood', pawpawId, getCultivar('Susquehanna'), null, "Pawpaw scion - Susquehanna", 'Susquehanna Pawpaw Scionwood', '10-12 in sticks', 5.00, 'seasonal', '26_100', '2027-01-15', '2027-03-01', 0, 'Dormant season only.', 'portal', 0.80, 'high'],
-    [getSupplier('midwest-scionwood'), 'scionwood', pawpawId, getCultivar('Shenandoah'), null, "Pawpaw scion - Shenandoah", 'Shenandoah Pawpaw Scionwood', '10-12 in sticks', 5.00, 'seasonal', '26_100', '2027-01-15', '2027-03-01', 0, 'Dormant season only.', 'portal', 0.80, 'high'],
-
-    // Nolin River - Chestnuts
-    [getSupplier('nolin-river'), 'plant', (db.prepare("SELECT id FROM plants WHERE common_name = 'Blight-Resistant Chestnut'").get() as any).id, null, null, "Dunstan Chestnut seedling", 'Dunstan Chestnut Seedling', 'bare root 3-4 ft', 28.00, 'preorder', null, '2026-12-01', '2027-03-15', 0, 'Blight resistant.', 'manual', 0.65, 'medium'],
-
-    // Hidden Springs - Permaculture
-    [getSupplier('hidden-springs'), 'plant', (db.prepare("SELECT id FROM plants WHERE common_name = 'Sea Buckthorn'").get() as any).id, null, null, "Sea Buckthorn female", 'Sea Buckthorn (Female)', '#2 pot', 22.00, 'in_stock', '6_25', null, null, 1, 'Female. Need male for fruit.', 'manual', 0.70, 'medium'],
-    [getSupplier('hidden-springs'), 'plant', (db.prepare("SELECT id FROM plants WHERE common_name = 'Black Currant'").get() as any).id, null, null, "Titania Black Currant", 'Titania Black Currant', '#1 pot', 15.00, 'limited', '1_5', null, null, 1, 'Excellent disease resistance.', 'manual', 0.70, 'medium'],
-
-    // St Lawrence - Cold hardy
-    [getSupplier('st-lawrence-nurseries'), 'cultivar_plant', appleId, getCultivar('Liberty'), null, "Liberty Apple bare root", 'Liberty Apple', 'bare root whip 4-5 ft', 32.00, 'preorder', null, '2027-04-01', '2027-05-15', 0, 'On Antonovka rootstock. Spring ship only.', 'csv', 0.80, 'high'],
-
-    // OHxF rootstocks at Cummins
-    [getSupplier('cummins-nursery'), 'rootstock', null, null, getRootstock('OHxF 87'), "OHxF 87 pear rootstock", 'OHxF 87 Pear Rootstock', '3/8-1/2 cal bare root', 5.00, 'in_stock', 'gt_100', '2026-11-01', '2027-04-01', 0, 'Standard pear rootstock.', 'portal', 0.95, 'high'],
-  ];
-
-  db.transaction(() => {
-    for (const l of listings) {
-      insertListing.run(...l);
-    }
-  })();
-
-  // Seed some zip zones (major cities for demo)
-  const insertZip = db.prepare(`
-    INSERT OR IGNORE INTO zip_zones (zip_code, zone, zone_number, lat, lng, city, state)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  const zips = [
-    ['55401', '4b', 4.5, 44.9778, -93.2650, 'Minneapolis', 'MN'],
-    ['55101', '4b', 4.5, 44.9537, -93.0900, 'St Paul', 'MN'],
-    ['53703', '5a', 5.0, 43.0731, -89.4012, 'Madison', 'WI'],
-    ['60601', '5b', 5.5, 41.8819, -87.6278, 'Chicago', 'IL'],
-    ['48201', '6a', 6.0, 42.3314, -83.0458, 'Detroit', 'MI'],
-    ['10001', '7a', 7.0, 40.7484, -73.9967, 'New York', 'NY'],
-    ['97201', '8b', 8.5, 45.5152, -122.6784, 'Portland', 'OR'],
-    ['98101', '8b', 8.5, 47.6062, -122.3321, 'Seattle', 'WA'],
-    ['04101', '5b', 5.5, 43.6591, -70.2568, 'Portland', 'ME'],
-    ['14850', '5b', 5.5, 42.4440, -76.5019, 'Ithaca', 'NY'],
-    ['40601', '6b', 6.5, 38.1970, -84.8631, 'Frankfort', 'KY'],
-    ['37201', '7a', 7.0, 36.1627, -86.7816, 'Nashville', 'TN'],
-    ['63101', '6a', 6.0, 38.6270, -90.1994, 'St Louis', 'MO'],
-    ['50309', '5a', 5.0, 41.5868, -93.6250, 'Des Moines', 'IA'],
-    ['43215', '6a', 6.0, 39.9612, -82.9988, 'Columbus', 'OH'],
-    ['15213', '6b', 6.5, 40.4406, -79.9959, 'Pittsburgh', 'PA'],
-    ['05401', '4b', 4.5, 44.4759, -73.2121, 'Burlington', 'VT'],
-    ['03101', '5b', 5.5, 42.9956, -71.4548, 'Manchester', 'NH'],
-    ['30301', '7b', 7.5, 33.7490, -84.3880, 'Atlanta', 'GA'],
-    ['78701', '8b', 8.5, 30.2672, -97.7431, 'Austin', 'TX'],
-  ];
-
-  db.transaction(() => {
-    for (const z of zips) {
-      insertZip.run(...z);
-    }
-  })();
-
-  console.log('Database seeded successfully!');
+  console.log('✅ Seed complete!');
 }
+
+seed().catch(console.error);

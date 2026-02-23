@@ -1,72 +1,76 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { parseQuery, searchListings } from '@/lib/search';
-import { initializeDb } from '@/lib/db';
-
-let dbReady = false;
+import { getSupabaseAdmin } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
-    if (!dbReady) {
-      initializeDb();
-      dbReady = true;
-    }
-
     const { searchParams } = new URL(request.url);
     const q = searchParams.get('q') || '';
-    const zone = searchParams.get('zone') ? parseFloat(searchParams.get('zone')!) : undefined;
-    const state = searchParams.get('state') || undefined;
-    const lat = searchParams.get('lat') ? parseFloat(searchParams.get('lat')!) : undefined;
-    const lng = searchParams.get('lng') ? parseFloat(searchParams.get('lng')!) : undefined;
+    const zip = searchParams.get('zip') || '';
 
     if (!q.trim()) {
-      return NextResponse.json({
-        results: [],
-        map_pins: [],
-        parsed_query: null,
-        meta: { total_results: 0, total_suppliers: 0 },
-      });
+      return NextResponse.json({ results: [], pins: [], query: null });
     }
 
     const parsed = parseQuery(q);
-    const results = searchListings(parsed, zone, state, lat, lng);
+    if (zip && /^\d{5}$/.test(zip)) parsed.zipCode = zip;
 
-    // Build map pins from unique suppliers
-    const supplierMap = new Map<number, any>();
-    for (const r of results) {
-      if (!supplierMap.has(r.supplier.id)) {
-        supplierMap.set(r.supplier.id, {
-          supplier_id: r.supplier.id,
-          name: r.supplier.name,
-          slug: r.supplier.slug,
-          lat: r.supplier.lat,
-          lng: r.supplier.lng,
-          city: r.supplier.city,
-          state: r.supplier.state,
-          listing_count: 0,
-        });
+    let userZone: number | undefined;
+    let userState: string | undefined;
+    let userLat: number | undefined;
+    let userLng: number | undefined;
+
+    const zipToLookup = parsed.zipCode || zip;
+    if (zipToLookup) {
+      const supabase = getSupabaseAdmin();
+      const { data: zoneData } = await supabase
+        .from('zip_zones')
+        .select('zone, state, lat, lng')
+        .eq('zip_code', zipToLookup)
+        .single();
+      if (zoneData) {
+        userZone = zoneData.zone;
+        userState = zoneData.state;
+        userLat = zoneData.lat;
+        userLng = zoneData.lng;
       }
-      supplierMap.get(r.supplier.id)!.listing_count++;
+    }
+
+    const results = await searchListings(parsed, userZone, userState, userLat, userLng);
+
+    const pins = results
+      .filter(r => r.supplierLat && r.supplierLng)
+      .map(r => ({
+        id: r.listingId,
+        lat: r.supplierLat!,
+        lng: r.supplierLng!,
+        name: r.supplierName,
+        title: r.normalizedTitle,
+        city: r.supplierCity,
+        state: r.supplierState,
+      }));
+
+    // Log search (fire and forget)
+    if (q.trim()) {
+      const supabase = getSupabaseAdmin();
+      supabase.from('user_searches').insert({
+        query_raw: q,
+        zip_code: zipToLookup || null,
+        result_count: results.length,
+      }).then(() => {}).catch(() => {});
     }
 
     return NextResponse.json({
       results,
-      map_pins: Array.from(supplierMap.values()),
-      parsed_query: parsed,
-      meta: {
-        total_results: results.length,
-        total_suppliers: supplierMap.size,
-      },
+      pins,
+      query: parsed,
+      zone: userZone,
+      state: userState,
     });
   } catch (error: any) {
     console.error('Search API error:', error);
     return NextResponse.json(
-      {
-        error: 'Search failed',
-        message: error?.message || 'Unknown error',
-        results: [],
-        map_pins: [],
-        meta: { total_results: 0, total_suppliers: 0 },
-      },
+      { error: 'Search failed', message: error?.message || 'Unknown error', results: [], pins: [] },
       { status: 500 }
     );
   }
