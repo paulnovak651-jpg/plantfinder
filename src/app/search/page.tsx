@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import { Suspense } from 'react';
 import dynamic from 'next/dynamic';
 
 // Dynamically import map to avoid SSR issues with Leaflet
@@ -55,7 +56,7 @@ interface SearchMeta {
   totalSuppliers: number;
 }
 
-export default function SearchPage() {
+function SearchPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [query, setQuery] = useState(searchParams.get('q') || '');
@@ -327,5 +328,13 @@ function ResultCard({ result: r }: { result: SearchResult }) {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={<div className='flex items-center justify-center min-h-screen bg-gray-950 text-white'>Loading...</div>}>
+      <SearchPageContent />
+    </Suspense>
   );
 }
