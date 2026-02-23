@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
         query_raw: q,
         zip_code: zipToLookup || null,
         result_count: results.length,
-      }).then(() => {}).catch(() => {});
+      }).then(() => {}, () => {});
     }
 
     return NextResponse.json({
