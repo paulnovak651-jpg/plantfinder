@@ -1,8 +1,19 @@
 import { createClient } from '@supabase/supabase-js';
+import * as dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
 
-const supabaseUrl = 'https://bwfhdyjjuubpzwjngquo.supabase.co';
-const supabaseServiceKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3ZmhkeWpqdXVicHp3am5ncXVvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MTg0ODg2OCwiZXhwIjoyMDg3NDI0ODY4fQ.FlHujojrkLzsmBE9Gm2VHRr9QxZxm0nrfd_A_cLI9WE';
+// SECURITY: Key is loaded from .env.local — never hardcode credentials.
+// NOTE: The previous key was exposed in git history and MUST be rotated
+// in the Supabase dashboard. See CODEX_HANDOFF.md task #1.
 
+function getRequiredEnv(name: string): string {
+  const val = process.env[name];
+  if (!val) throw new Error(`Missing required env var: ${name}`);
+  return val;
+}
+
+const supabaseUrl = getRequiredEnv('NEXT_PUBLIC_SUPABASE_URL');
+const supabaseServiceKey = getRequiredEnv('SUPABASE_SERVICE_ROLE_KEY');
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 async function seed() {
@@ -166,4 +177,4 @@ async function seed() {
   console.log('✅ Seed complete!');
 }
 
-seed().catch(console.error);
+seed().catch((err) => { console.error(err); process.exit(1); });
