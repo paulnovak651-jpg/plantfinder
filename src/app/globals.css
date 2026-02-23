@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+:root {
+  --foreground: #e7e5e4;
+  --background: #0c0a09;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+}
+
+/* Leaflet overrides for dark theme */
+.leaflet-container {
+  background: #1c1917 !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: #292524 !important;
+  color: #e7e5e4 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important;
+}
+
+.leaflet-popup-tip {
+  background: #292524 !important;
+}
+
+.leaflet-popup-close-button {
+  color: #a8a29e !important;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1c1917;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #44403c;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #57534e;
+}
