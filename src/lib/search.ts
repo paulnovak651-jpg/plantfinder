@@ -1,5 +1,11 @@
 import { getDb } from './db';
 
+// Safe JSON array parser - prevents API crashes on malformed data
+function safeJsonArray(value: string | null | undefined): any[] {
+  if (!value) return [];
+  try { return JSON.parse(value); } catch { return []; }
+}
+
 export interface ParsedQuery {
   intent_type: 'exact_item' | 'category' | 'goal_based' | 'trait_based';
   plant_terms: string[];
@@ -23,12 +29,12 @@ export interface SearchResult {
     zone_max: number;
     edible: boolean;
     use_tags: string[];
+    pollination_notes: string;
   } | null;
   cultivar: {
     id: number;
     name: string;
     self_fertile: boolean;
-    pollination_notes: string;
   } | null;
   rootstock: {
     id: number;
@@ -81,12 +87,13 @@ export function parseQuery(raw: string): ParsedQuery {
     availability_preference: 'any',
   };
 
-  // Detect listing type
-  if (/scion(wood)?/i.test(q)) result.listing_type = 'scionwood';
-  else if (/rootstock/i.test(q)) result.listing_type = 'rootstock';
-  else if (/cutting/i.test(q)) result.listing_type = 'cutting';
-  else if (/seed(s|ling)?/i.test(q)) result.listing_type = 'plant';
-  else if (/liner/i.test(q)) result.listing_type = 'liner';
+  // Detect listing type - using word boundaries to prevent false matches
+  if (/\bscion(?:wood)?\b/i.test(q)) result.listing_type = 'scionwood';
+  else if (/\brootstock\b/i.test(q)) result.listing_type = 'rootstock';
+  else if (/\bcuttings?\b/i.test(q)) result.listing_type = 'cutting';
+  else if (/\bseedlings?\b/i.test(q)) result.listing_type = 'plant';
+  else if (/\bseeds?\b/i.test(q)) result.listing_type = 'seed';
+  else if (/\bliners?\b/i.test(q)) result.listing_type = 'liner';
 
   // Detect zone
   const zoneMatch = q.match(/zone\s*(\d+[ab]?)/i);
@@ -141,7 +148,7 @@ export function parseQuery(raw: string): ParsedQuery {
 
   let cleaned = q
     .replace(/zone\s*\d+[ab]?/gi, '')
-    .replace(/\b(scionwood|scion|rootstock|cutting|seedling|liner|bare root|potted)\b/gi, '')
+    .replace(/\b(scionwood|scion|rootstock|cuttings?|seedlings?|seeds?|liners?|bare root|potted)\b/gi, '')
     .replace(/\b(now|available|in stock|preorder)\b/gi, '')
     .replace(/\b(hedge|privacy|windbreak|nitrogen|pollinator|native|edible|food forest|erosion|wildlife|timber)\b/gi, '')
     .replace(/\b(shade|wet|dry|cold hardy|disease resistant|self fertile|fast growing)\b/gi, '')
@@ -296,10 +303,10 @@ export function searchListings(
 
     if (row.confidence_band === 'high') reasons.push({ tag: 'high_confidence', label: 'Recently updated' });
 
-    // Check shipping
+    // Check shipping - using safe JSON parser
     let shipsToUser = true;
     if (userState && row.restricted_states) {
-      const restricted = JSON.parse(row.restricted_states || '[]');
+      const restricted = safeJsonArray(row.restricted_states);
       if (restricted.includes(userState)) shipsToUser = false;
     }
     if (shipsToUser && userState) {
@@ -310,7 +317,7 @@ export function searchListings(
     let distanceScore = 0;
     if (userLat && userLng && row.supplier_lat && row.supplier_lng) {
       const dist = haversine(userLat, userLng, row.supplier_lat, row.supplier_lng);
-      distanceScore = Math.max(0, 1 - dist / 3000); // normalize to 3000 miles
+      distanceScore = Math.max(0, 1 - dist / 3000);
     }
 
     // Composite ranking score
@@ -337,19 +344,19 @@ export function searchListings(
         zone_min: row.plant_zone_min,
         zone_max: row.plant_zone_max,
         edible: !!row.edible,
-        use_tags: JSON.parse(row.use_tags || '[]'),
+        use_tags: safeJsonArray(row.use_tags),
+        pollination_notes: row.pollination_notes || '',
       } : null,
       cultivar: row.cultivar_id ? {
         id: row.cultivar_id,
         name: row.cultivar_name,
         self_fertile: !!row.self_fertile,
-        pollination_notes: row.pollination_notes || '',
       } : null,
       rootstock: row.rootstock_id ? {
         id: row.rootstock_id,
         name: row.rootstock_name,
         vigor_class: row.vigor_class,
-        compatible_with: JSON.parse(row.compatible_with || '[]'),
+        compatible_with: safeJsonArray(row.compatible_with),
       } : null,
       supplier: {
         id: row.supplier_id,
